@@ -14,6 +14,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private static final String BROKER_URL = "tcp://test.mosquitto.org:1883";
     private static final String CLIENT_ID = "client_android_12345";
+    private static final String USER_ID = "user_12345"; // Aggiungi user_id
 
     private SensorManager sensorManager;
     private Sensor accelerometer;
@@ -24,7 +25,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private float[] lastAccelerometerValues = new float[3];
     private float[] lastGyroscopeValues = new float[3];
-    private static final float THRESHOLD = 0.1f;
+    private static final float THRESHOLD = 0.05f;
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -66,12 +67,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     @Override
-    protected void onDestroy() {
-        mqttHandler.disconnect();
-        super.onDestroy();
-    }
-
-    @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             float x = event.values[0];
@@ -105,6 +100,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     @Override
+    protected void onDestroy() {
+        if (mqttHandler != null) {
+            mqttHandler.disconnect();
+        }
+        super.onDestroy();
+    }
+
+    @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
         // Not necessary for this example
     }
@@ -116,6 +119,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void publishMessage(String topic, String message) {
-        mqttHandler.publish(topic, message);
+        String messageWithUserId = "user_id: " + USER_ID + "\n" + message;
+        mqttHandler.publish(topic, messageWithUserId);
     }
 }
