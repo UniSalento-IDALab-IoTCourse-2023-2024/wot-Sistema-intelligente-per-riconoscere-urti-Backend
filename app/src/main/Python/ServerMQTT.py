@@ -3,6 +3,7 @@ import paho.mqtt.client as mqtt
 import numpy as np
 import re
 import pandas as pd
+import requests as requests
 
 # Impostazioni MQTT
 BROKER_URL = "test.mosquitto.org"
@@ -75,6 +76,16 @@ def try_predict():
                 event_count += 1
 
                 print(f"Evento {event_count}: {prediction[0]} | User ID: {user_id}")
+
+                url = "http://127.0.0.1:5001/add_incidenti"
+                headers = {"Content-Type": "application/json"}
+                data = {"cliente_incidentato": user_id}
+                if prediction[0] == "frenate":
+                    response = requests.post(url=url, headers=headers, json=data)
+                    if response.status_code == 200:
+                        print("Incidente salvato con successo")
+                    else:
+                        print("Incidente non salvato")
 
             except ValueError as e:
                 print(f"Errore di previsione: {e}")
