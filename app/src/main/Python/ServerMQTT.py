@@ -24,7 +24,6 @@ event_count = 0
 # Variabile globale per memorizzare l'user_id
 user_id = None
 
-
 # Preprocessa il payload del messaggio in arrivo
 def preprocess_payload(payload):
     try:
@@ -77,15 +76,23 @@ def try_predict():
 
                 print(f"Evento {event_count}: {prediction[0]} | User ID: {user_id}")
 
-                url = "http://127.0.0.1:5001/add_incidenti"
+                url = "http://127.0.0.1:5001/add_frenate"
                 headers = {"Content-Type": "application/json"}
                 data = {"cliente_incidentato": user_id}
-                if prediction[0] == "frenate":
+                if prediction[0] == "incidenti":
                     response = requests.post(url=url, headers=headers, json=data)
                     if response.status_code == 200:
                         print("Incidente salvato con successo")
                     else:
                         print("Incidente non salvato")
+
+                if prediction[0] == "frenate":
+                    response = requests.post(url=url, headers=headers, json=data)
+                    if response.status_code == 200:
+                        print("Frenata salvata con successo")
+                    else:
+                        print("Frenata non salvata")
+
 
             except ValueError as e:
                 print(f"Errore di previsione: {e}")

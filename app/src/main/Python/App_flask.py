@@ -4,6 +4,7 @@ import bcrypt
 import jwt
 from DTO.utente import *
 from DTO.incidente import *
+from DTO.frenate import *
 import datetime
 
 app = Flask(__name__)
@@ -16,6 +17,7 @@ client = MongoClient("mongodb://localhost:27017")
 db = client.mydatabase
 users_collection = db.utenti
 incident_collection = db.incidenti
+frenate_collection = db.frenate
 
 
 # Funzione per generare un token JWT
@@ -134,6 +136,29 @@ def find_all_incident(username):
     incidenti = list(incident_collection.find({"cliente_incidentato": username}, {"_id": 0}))
 
     return jsonify(incidenti), 200
+
+@app.route('/add_frenate', methods=['POST'])
+def register_frenate():
+    data = request.get_json()
+
+    frenate = Frenate()
+
+    frenate.set_data()
+    frenate.set_cliente(data.get('cliente'))
+
+    if not frenate.get_cliente():
+        return jsonify({"Messaggio": "Inserisci l'utente che ha frenato"}), 400
+
+    frenate_collection.insert_one(frenate.to_dict())
+
+    return jsonify({"Messaggio": "Frenata registrata con successo"}), 200
+
+
+@app.route('/get_frenate_by_username/<username>', methods=['GET'])
+def find_all_frenate(username):
+    frenate = list(frenate_collection.find({"cliente": username}, {"_id": 0}))
+
+    return jsonify(frenate), 200
 
 
 if __name__ == '__main__':
