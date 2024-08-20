@@ -7,7 +7,10 @@ from DTO.incidente import *
 from DTO.frenate import *
 import datetime
 
+from flask_cors import CORS
+
 app = Flask(__name__)
+CORS(app)
 
 # Configurazione del segreto per JWT
 app.config['SECRET_KEY'] = 'CIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAO'
