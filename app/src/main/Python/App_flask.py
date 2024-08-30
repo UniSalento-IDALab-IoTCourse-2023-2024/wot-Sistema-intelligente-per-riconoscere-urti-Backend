@@ -6,7 +6,7 @@ from DTO.utente import *
 from DTO.incidente import *
 from DTO.frenate import *
 import datetime
-
+from bson.objectid import ObjectId
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -33,7 +33,7 @@ def generate_token(username):
 
 
 # Route per la registrazione
-@app.route('/registrazione', methods=['POST'])
+@app.route('/api/utenti/registrazione', methods=['POST'])
 def register():
     data = request.json
 
@@ -63,8 +63,37 @@ def register():
     return jsonify({"Messaggio": "Utente registrato con successo"}), 200
 
 
+@app.route('/api/utenti/update/<username>', methods=['PUT'])
+def update_user(username):
+    data = request.json
+
+    # Trova l'utente esistente
+    user = users_collection.find_one({"username": username})
+
+    if not user:
+        return jsonify({"Messaggio": "Utente non trovato"}), 404
+
+    # Aggiorna i campi dell'utente solo se forniti
+    if 'nome' in data:
+        user['nome'] = data.get('nome')
+    if 'cognome' in data:
+        user['cognome'] = data.get('cognome')
+    if 'numero_telefono' in data:
+        user['numero_telefono'] = data.get('numero_telefono')
+    if 'email' in data:
+        user['email'] = data.get('email')
+    if 'password' in data:
+        hashed_password = bcrypt.hashpw(data.get('password').encode('utf-8'), bcrypt.gensalt())
+        user['password'] = hashed_password
+
+    # Aggiorna l'utente nel database
+    users_collection.update_one({"username": username}, {"$set": user})
+
+    return jsonify({"Messaggio": "Utente aggiornato con successo"}), 200
+
+
 # Route per il login
-@app.route('/login', methods=['POST'])
+@app.route('/api/utenti/login', methods=['POST'])
 def login():
     data = request.json
 
@@ -86,7 +115,7 @@ def login():
     return jsonify({"Messaggio": "Login effettuato", "token": token}), 200
 
 
-@app.route('/delete/<username>', methods=['DELETE'])
+@app.route('/api/utenti/delete/<username>', methods=['DELETE'])
 def delete_user(username):
     result = users_collection.delete_one({"username": username})
 
@@ -96,7 +125,7 @@ def delete_user(username):
     return jsonify({"Messaggio": "Utente eliminato con successo"}), 200
 
 
-@app.route('/find_by_username/<username>', methods=['GET'])
+@app.route('/api/utenti/find_by_username/<username>', methods=['GET'])
 def find_by_username(username):
     user = users_collection.find_one({"username": username}, {"_id": 0})
 
@@ -108,7 +137,7 @@ def find_by_username(username):
     return jsonify(user), 200
 
 
-@app.route('/utenti', methods=['GET'])
+@app.route('/api/utenti/', methods=['GET'])
 def find_all():
     users = list(users_collection.find({}, {"_id": 0}))
     for user in users:
@@ -117,7 +146,7 @@ def find_all():
     return jsonify(users), 200
 
 
-@app.route('/add_incidenti', methods=['POST'])
+@app.route('/api/incidenti/add_incidenti', methods=['POST'])
 def register_incident():
     data = request.get_json()
 
@@ -129,18 +158,35 @@ def register_incident():
     if not incidente.get_cliente_incidentato():
         return jsonify({"Messaggio": "Inserisci l'utente che si è incidentato"}), 400
 
-    incident_collection.insert_one(incidente.to_dict())
+    result = incident_collection.insert_one(incidente.to_dict())
+    id_incidente = result.inserted_id
 
-    return jsonify({"Messaggio": "Incidente registrato con successo"}), 200
+    return jsonify({"Messaggio": "Incidente registrato con successo", "id": str(id_incidente)}), 200
 
 
-@app.route('/get_incidenti_by_username/<username>', methods=['GET'])
+@app.route('/api/incidenti/get_incidenti_by_username/<username>', methods=['GET'])
 def find_all_incident(username):
-    incidenti = list(incident_collection.find({"cliente_incidentato": username}, {"_id": 0}))
-
+    incidenti = list(incident_collection.find({"cliente_incidentato": username}))
+    for incidente in incidenti:
+        incidente['_id'] = str(incidente['_id'])
     return jsonify(incidenti), 200
 
-@app.route('/add_frenate', methods=['POST'])
+
+@app.route('/api/incidenti/delete/<id>', methods=['DELETE'])
+def delete_incidente(id):
+    try:
+        incident_object_id = ObjectId(id)
+    except Exception as e:
+        return jsonify({"Messaggio": "ID non valido"}), 400
+
+    result = incident_collection.delete_one({"_id": incident_object_id})
+
+    if result.deleted_count == 0:
+        return jsonify({"Messaggio": "Incidente non trovato"}), 404
+
+    return jsonify({"Messaggio": "Incidente eliminato con successo"}), 200
+
+@app.route('/api/frenate/add_frenate', methods=['POST'])
 def register_frenate():
     data = request.get_json()
 
@@ -152,17 +198,32 @@ def register_frenate():
     if not frenate.get_cliente():
         return jsonify({"Messaggio": "Inserisci l'utente che ha frenato"}), 400
 
-    frenate_collection.insert_one(frenate.to_dict())
+    result = frenate_collection.insert_one(frenate.to_dict())
+    id_frenata = result.inserted_id
 
-    return jsonify({"Messaggio": "Frenata registrata con successo"}), 200
+    return jsonify({"Messaggio": "Frenata registrata con successo", "id": str(id_frenata)}), 200
 
 
-@app.route('/get_frenate_by_username/<username>', methods=['GET'])
+@app.route('/api/frenate/get_frenate_by_username/<username>', methods=['GET'])
 def find_all_frenate(username):
-    frenate = list(frenate_collection.find({"cliente": username}, {"_id": 0}))
-
+    frenate = list(frenate_collection.find({"cliente": username}))
+    for frenata in frenate:
+        frenata['_id'] = str(frenata['_id'])
     return jsonify(frenate), 200
 
+@app.route('/api/frenate/delete/<id>', methods=['DELETE'])
+def delete_frenata(id):
+    try:
+        frenate_object_id = ObjectId(id)
+    except Exception as e:
+        return jsonify({"Messaggio": "ID non valido"}), 400
+
+    result = frenate_collection.delete_one({"_id": frenate_object_id})
+
+    if result.deleted_count == 0:
+        return jsonify({"Messaggio": "Frenata non trovata"}), 404
+
+    return jsonify({"Messaggio": "Frenata eliminata con successo"}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)

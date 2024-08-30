@@ -74,16 +74,13 @@ def try_predict():
                 # Incrementa il contatore degli eventi
                 event_count += 1
 
-                if prediction[0] != "altro":
-                    print(f"Evento {event_count}: {prediction[0]} | User ID: {user_id}")
+                print(f"Evento {event_count}: {prediction[0]} | User ID: {user_id}")
 
                 if prediction[0] == "incidenti":
                     url = "http://127.0.0.1:5001/add_incidenti"
                     headers = {"Content-Type": "application/json"}
                     data = {"cliente_incidentato": user_id}
                     response = requests.post(url=url, headers=headers, json=data)
-                    print(f"Valori Accelerometro: {accel_data}")
-                    print(f"Valori Giroscopio: {gyro_data}")
                     if response.status_code == 200:
                         print("Incidente salvato con successo")
                     else:
@@ -94,8 +91,6 @@ def try_predict():
                     headers = {"Content-Type": "application/json"}
                     data = {"cliente": user_id}
                     response = requests.post(url=url, headers=headers, json=data)
-                    print(f"Valori Accelerometro: {accel_data}")
-                    print(f"Valori Giroscopio: {gyro_data}")
                     if response.status_code == 200:
                         print("Frenata salvata con successo")
                     else:
