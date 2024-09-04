@@ -1,157 +1,168 @@
-import joblib
-import paho.mqtt.client as mqtt
-import numpy as np
-import re
-import pandas as pd
-import requests as requests
+from flask import Flask, request, jsonify
+from pymongo import MongoClient
+import bcrypt
+import jwt
+from DTO.utente import *
+from DTO.incidente import *
+from DTO.frenate import *
+import datetime
 
-# Impostazioni MQTT
-BROKER_URL = "test.mosquitto.org"
-BROKER_PORT = 1883
-TOPICS = [("iot/accelerometer", 0), ("iot/gyroscope", 0)]
+from flask_cors import CORS
 
-# Carica il modello pre-addestrato
-with open('model.joblib', 'rb') as model_file:
-    model = joblib.load(model_file)
+app = Flask(__name__)
+CORS(app)
 
-# Variabili globali per memorizzare i dati dei sensori
-accel_data = None
-gyro_data = None
+# Configurazione del segreto per JWT
+app.config['SECRET_KEY'] = 'CIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAO'
 
-# Variabile globale per contare gli eventi
-event_count = 0
-
-# Variabile globale per memorizzare l'user_id
-user_id = None
-
-# Preprocessa il payload del messaggio in arrivo
-def preprocess_payload(payload):
-    try:
-        # Sostituisci le virgole con i punti decimali
-        payload = payload.replace(',', '.')
-
-        # Estrai l'user_id dal payload
-        user_id_match = re.search(r"user_id:\s*(\w+)", payload)
-        if user_id_match:
-            global user_id
-            user_id = user_id_match.group(1)
-
-        # Estrae i numeri dal payload utilizzando una regex
-        data = re.findall(r"[-+]?\d*\.\d+(?:[eE][-+]?\d+)?", payload)
-        # Converte i valori in float, gestendo la notazione scientifica
-        data = np.array([float(x) for x in data])
-        return data
-    except Exception as e:
-        print(f"Errore durante l'elaborazione del payload: {e}")
-        return None
+# Connessione a MongoDB
+client = MongoClient("mongodb://localhost:27017")
+db = client.mydatabase
+users_collection = db.utenti
+incident_collection = db.incidenti
+frenate_collection = db.frenate
 
 
-# Funzione per tentare la previsione se sono disponibili entrambi i dataset
-def try_predict():
-    global accel_data, gyro_data, event_count, user_id
-
-    if accel_data is not None and gyro_data is not None:
-        # Controlla che i dati abbiano la dimensione corretta
-        if len(accel_data) == 3 and len(gyro_data) == 3:
-            # Combina i dati dei due sensori
-            combined_data = np.concatenate((accel_data, gyro_data)).reshape(1, -1)
-
-            # Stampa i dati combinati con formattazione decimale
-            formatted_data = ["{:.4f}".format(x) for x in combined_data[0]]
-            # print(f"Dati combinati: {formatted_data}")
-
-            # Predice l'evento
-            try:
-                # Supponendo che questi siano i nomi delle caratteristiche usati durante il training
-                feature_names = ["acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"]
-
-                # Converti l'array numpy in un DataFrame
-                combined_data_df = pd.DataFrame(combined_data, columns=feature_names)
-
-                # Fai la previsione usando il DataFrame
-                prediction = model.predict(combined_data_df)
-
-                # Incrementa il contatore degli eventi
-                event_count += 1
-
-                print(f"Evento {event_count}: {prediction[0]} | User ID: {user_id}")
-
-                if prediction[0] == "incidenti":
-                    url = "http://127.0.0.1:5001/add_incidenti"
-                    headers = {"Content-Type": "application/json"}
-                    data = {"cliente_incidentato": user_id}
-                    response = requests.post(url=url, headers=headers, json=data)
-                    if response.status_code == 200:
-                        print("Incidente salvato con successo")
-                    else:
-                        print("Incidente non salvato")
-
-                if prediction[0] == "frenate":
-                    url = "http://127.0.0.1:5001/add_frenate"
-                    headers = {"Content-Type": "application/json"}
-                    data = {"cliente": user_id}
-                    response = requests.post(url=url, headers=headers, json=data)
-                    if response.status_code == 200:
-                        print("Frenata salvata con successo")
-                    else:
-                        print("Frenata non salvata")
-
-            except ValueError as e:
-                print(f"Errore di previsione: {e}")
-
-        else:
-            print(f"Dati dei sensori non validi: Accelerometro - {len(accel_data)}, Giroscopio - {len(gyro_data)}")
-
-        # Resetta i dati
-        accel_data = None
-        gyro_data = None
+# Funzione per generare un token JWT
+def generate_token(username):
+    token = jwt.encode({
+        'user': username,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    }, app.config['SECRET_KEY'], algorithm="HS256")
+    return token
 
 
-# Callback quando il client riceve un messaggio
-def on_message(client, userdata, message):
-    global accel_data, gyro_data
+# Route per la registrazione
+@app.route('/registrazione', methods=['POST'])
+def register():
+    data = request.json
 
-    payload = message.payload.decode('utf-8')
-    # print(f"Messaggio ricevuto '{payload}' sul topic '{message.topic}'")
+    utente = Utente()
 
-    # Preprocessa i dati
-    data = preprocess_payload(payload)
-    if data is not None:
-        if message.topic == "iot/accelerometer":
-            if len(data) == 3:
-                accel_data = data
-            else:
-                print(f"Dati accelerometro non validi: {data}")
-        elif message.topic == "iot/gyroscope":
-            if len(data) == 3:
-                gyro_data = data
-            else:
-                print(f"Dati giroscopio non validi: {data}")
+    utente.set_nome(data.get('nome'))
+    utente.set_cognome(data.get('cognome'))
+    utente.set_numero_telefono(data.get('numero_telefono'))
+    utente.set_username(data.get('username'))
+    utente.set_email(data.get('email'))
+    utente.set_password(data.get('password'))
 
-        # Tenta di prevedere se abbiamo entrambi i dati di accelerometro e giroscopio
-        try_predict()
-    else:
-        print("Impossibile preprocessare i dati per la previsione.")
+    if not utente.get_username() or not utente.get_password() or not utente.get_email() or not utente.get_numero_telefono():
+        return jsonify({"Messaggio": "Inserisci username, password, email e numero_telefono"}), 400
 
+    # Controlla se l'utente esiste già
+    if users_collection.find_one({"username": utente.get_username()}) or users_collection.find_one({"email": utente.get_email()}):
+        return jsonify({"Messaggio": "L'utente esiste. Cambiare email o username"}), 409
 
-# Callback quando il client si connette al broker
-def on_connect(client, userdata, flags, rc):
-    if rc == 0:
-        print("Connessione avvenuta con successo")
-        # Iscriviti ai topic
-        for topic in TOPICS:
-            client.subscribe(topic)
-    else:
-        print(f"Connessione fallita con codice {rc}")
+    # Cripta la password
+    hashed_password = bcrypt.hashpw(utente.get_password().encode('utf-8'), bcrypt.gensalt())
+    utente.set_password(hashed_password)
+
+    # Crea un nuovo utente
+    users_collection.insert_one(utente.to_dict())
+
+    return jsonify({"Messaggio": "Utente registrato con successo"}), 200
 
 
-# Inizializza il client MQTT
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_message = on_message
+# Route per il login
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
 
-# Connetti al broker MQTT
-client.connect(BROKER_URL, BROKER_PORT, 60)
+    username = data.get('username')
+    password = data.get('password')
 
-# Avvia il loop del client MQTT
-client.loop_forever()
+    if not username or not password:
+        return jsonify({"Messaggio": "Inserire Username e Password"}), 400
+
+    # Cerca l'utente nel database
+    user = users_collection.find_one({"username": username})
+
+    if not user or not bcrypt.checkpw(password.encode('utf-8'), user['password']):
+        return jsonify({"Messaggio": "Credenziali errate"}), 400
+
+    # Genera un token JWT
+    token = generate_token(username)
+
+    return jsonify({"Messaggio": "Login effettuato", "token": token}), 200
+
+
+@app.route('/delete/<username>', methods=['DELETE'])
+def delete_user(username):
+    result = users_collection.delete_one({"username": username})
+
+    if result.deleted_count == 0:
+        return jsonify({"Messaggio": "Utente non trovato"}), 404
+
+    return jsonify({"Messaggio": "Utente eliminato con successo"}), 200
+
+
+@app.route('/find_by_username/<username>', methods=['GET'])
+def find_by_username(username):
+    user = users_collection.find_one({"username": username}, {"_id": 0})
+
+    if not user:
+        return jsonify({"Messaggio": "Utente non trovato"}), 404
+
+    user['password'] = "****"
+
+    return jsonify(user), 200
+
+
+@app.route('/utenti', methods=['GET'])
+def find_all():
+    users = list(users_collection.find({}, {"_id": 0}))
+    for user in users:
+        user['password'] = "****"
+
+    return jsonify(users), 200
+
+
+@app.route('/add_incidenti', methods=['POST'])
+def register_incident():
+    data = request.get_json()
+
+    incidente = Incidente()
+
+    incidente.set_data()
+    incidente.set_cliente_incidentato(data.get('cliente_incidentato'))
+
+    if not incidente.get_cliente_incidentato():
+        return jsonify({"Messaggio": "Inserisci l'utente che si è incidentato"}), 400
+
+    incident_collection.insert_one(incidente.to_dict())
+
+    return jsonify({"Messaggio": "Incidente registrato con successo"}), 200
+
+
+@app.route('/get_incidenti_by_username/<username>', methods=['GET'])
+def find_all_incident(username):
+    incidenti = list(incident_collection.find({"cliente_incidentato": username}, {"_id": 0}))
+
+    return jsonify(incidenti), 200
+
+@app.route('/add_frenate', methods=['POST'])
+def register_frenate():
+    data = request.get_json()
+
+    frenate = Frenate()
+
+    frenate.set_data()
+    frenate.set_cliente(data.get('cliente'))
+
+    if not frenate.get_cliente():
+        return jsonify({"Messaggio": "Inserisci l'utente che ha frenato"}), 400
+
+    frenate_collection.insert_one(frenate.to_dict())
+
+    return jsonify({"Messaggio": "Frenata registrata con successo"}), 200
+
+
+@app.route('/get_frenate_by_username/<username>', methods=['GET'])
+def find_all_frenate(username):
+    frenate = list(frenate_collection.find({"cliente": username}, {"_id": 0}))
+
+    return jsonify(frenate), 200
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5001)
