@@ -5,6 +5,7 @@ import re
 import pandas as pd
 import requests as requests
 
+
 # Impostazioni MQTT
 BROKER_URL = "test.mosquitto.org"
 BROKER_PORT = 1883

@@ -225,5 +225,6 @@ def delete_frenata(id):
 
     return jsonify({"Messaggio": "Frenata eliminata con successo"}), 200
 
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
