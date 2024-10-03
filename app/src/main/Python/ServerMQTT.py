@@ -42,7 +42,7 @@ def preprocess_payload(payload):
         print(f"Errore durante l'elaborazione del payload: {e}")
         return None
 
-# Funzione per pubblicare un messaggio via MQTT
+
 # Funzione per pubblicare un messaggio via MQTT
 def publish_mqtt_message(client, topic, message):
     try:
@@ -67,7 +67,7 @@ def try_predict():
                 prediction = model.predict(combined_data_df)
                 event_count += 1
 
-                if prediction[0] != "altro":
+                if prediction[0] != "ciao":
                     print(f"Evento {event_count}: {prediction[0]} | User ID: {user_id}")
 
                 if prediction[0] == "incidenti":
@@ -97,6 +97,11 @@ def try_predict():
 
                     else:
                         print("Frenata non salvata")
+
+                if prediction[0] == "altro":
+                    print(f"Valori Accelerometro: {accel_data}")
+                    print(f"Valori Giroscopio: {gyro_data}")
+
 
             except ValueError as e:
                 print(f"Errore di previsione: {e}")
