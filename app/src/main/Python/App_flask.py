@@ -228,6 +228,7 @@ def delete_frenata(id):
 
     return jsonify({"Messaggio": "Frenata eliminata con successo"}), 200
 
+
 @app.route('/api/send_email/<email_receiver>/<username>', methods=['POST'])
 def send_email(email_receiver, username):
     email_sender = 'progettoprincipi167@gmail.com'
@@ -259,6 +260,20 @@ def send_email(email_receiver, username):
     except Exception as e:
         # Gestione degli errori
         return jsonify({"Errore": str(e)}), 500
+
+@app.route('/api/incidenti/', methods=['GET'])
+def get_all():
+    try:
+        # Trova tutti gli incidenti, selezionando solo "cliente_incidentato" e "data"
+        incidenti = list(incident_collection.find({}, {"cliente_incidentato": 1, "date": 1, "_id": 0}))
+
+        # Restituisce la lista degli incidenti
+        return jsonify(incidenti), 200
+
+    except Exception as e:
+        # Gestione degli errori
+        return jsonify({"Errore": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
