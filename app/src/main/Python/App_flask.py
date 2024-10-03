@@ -8,6 +8,9 @@ from DTO.frenate import *
 import datetime
 from bson.objectid import ObjectId
 from flask_cors import CORS
+import ssl
+from email.message import EmailMessage
+import smtplib
 
 app = Flask(__name__)
 CORS(app)
@@ -225,6 +228,37 @@ def delete_frenata(id):
 
     return jsonify({"Messaggio": "Frenata eliminata con successo"}), 200
 
+@app.route('/api/send_email/<email_receiver>/<username>', methods=['POST'])
+def send_email(email_receiver, username):
+    email_sender = 'progettoprincipi167@gmail.com'
+    email_password = 'kuae wzfj vejq naup'
+
+    subject = 'INCIDENTE RILEVATO'
+    now = datetime.datetime.now()
+    data = now.strftime("%d/%m/%Y")  # Solo la data
+    ora = now.strftime("%H:%M:%S")  # Solo ora e secondi
+
+    body = f"L'utente {username} si è incidentato il giorno {data} all'ora {ora}"
+
+    em = EmailMessage()
+    em['From'] = email_sender
+    em['To'] = email_receiver
+    em['Subject'] = subject
+    em.set_content(body)
+
+    context = ssl.create_default_context()
+
+    try:
+        # Accesso e invio dell'email tramite il server SMTP di Gmail
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+            smtp.login(email_sender, email_password)
+            smtp.sendmail(email_sender, email_receiver, em.as_string())
+
+        return jsonify({"Messaggio": "Email mandata con successo"}), 200
+
+    except Exception as e:
+        # Gestione degli errori
+        return jsonify({"Errore": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
