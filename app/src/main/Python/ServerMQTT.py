@@ -71,12 +71,26 @@ def try_predict():
                     url = "http://127.0.0.1:5001/api/incidenti/add_incidenti"
                     headers = {"Content-Type": "application/json"}
                     data = {"cliente_incidentato": user_id}
+
                     response = requests.post(url=url, headers=headers, json=data)
+
                     print(f"Valori Accelerometro: {accel_data}")
                     print(f"Valori Giroscopio: {gyro_data}")
+
                     if response.status_code == 200:
+                        response_data = response.json()  # Decodifica la risposta JSON
+                        incident_id = response_data.get("id")  # Ottieni l'ID dell'incidente
+
                         print("Incidente salvato con successo")
-                        publish_mqtt_message(client, "iot/notifications", f"Rilevato INCIDENTE con i seguenti valori.\nAcccelerometro: {accel_data}\nGiroscopio: {gyro_data}")
+                        print(f"ID incidente: {incident_id}")
+
+                        # Invia il messaggio MQTT con l'ID dell'incidente
+                        publish_mqtt_message(client, "iot/notifications",
+                                             f"Rilevato INCIDENTE con i seguenti valori.\n"
+                                             f"Acccelerometro: {accel_data}\n"
+                                             f"Giroscopio: {gyro_data}\n"
+                                             f"ID Incidente: {incident_id}"
+                                             )
 
                     else:
                         print("Incidente non salvato")
