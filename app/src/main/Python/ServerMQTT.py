@@ -67,9 +67,6 @@ def try_predict():
                 prediction = model.predict(combined_data_df)
                 event_count += 1
 
-                if prediction[0] != "ciao":
-                    print(f"Evento {event_count}: {prediction[0]} | User ID: {user_id}")
-
                 if prediction[0] == "incidenti":
                     url = "http://127.0.0.1:5001/api/incidenti/add_incidenti"
                     headers = {"Content-Type": "application/json"}
@@ -101,6 +98,7 @@ def try_predict():
                 if prediction[0] == "altro":
                     print(f"Valori Accelerometro: {accel_data}")
                     print(f"Valori Giroscopio: {gyro_data}")
+                    publish_mqtt_message(client, "iot/notifications", "Evento rilevato: ALTRO")
 
 
             except ValueError as e:

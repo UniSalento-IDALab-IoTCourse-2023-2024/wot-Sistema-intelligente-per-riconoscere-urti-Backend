@@ -171,7 +171,8 @@ def register_incident():
 def find_all_incident(username):
     incidenti = list(incident_collection.find({"cliente_incidentato": username}))
     for incidente in incidenti:
-        incidente['_id'] = str(incidente['_id'])
+        incidente['_id'] = str(incidente['_id'])  # Converti ObjectId in stringa
+        incidente['id'] = incidente['_id']  # Aggiungi id con lo stesso valore
     return jsonify(incidenti), 200
 
 
