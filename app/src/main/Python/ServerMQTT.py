@@ -6,7 +6,6 @@ import pandas as pd
 import requests as requests
 
 
-# Impostazioni MQTT
 BROKER_URL = "test.mosquitto.org"
 BROKER_PORT = 1883
 TOPICS = [("iot/accelerometer", 0), ("iot/gyroscope", 0)]
@@ -15,11 +14,11 @@ TOPICS = [("iot/accelerometer", 0), ("iot/gyroscope", 0)]
 with open('model.joblib', 'rb') as model_file:
     model = joblib.load(model_file)
 
-# Variabili globali per memorizzare i dati dei sensori
+# Variabili globali per memorizzare i dati dei sensori di accellerometro e giroscopio
 accel_data = None
 gyro_data = None
 
-# Variabile globale per contare gli eventi
+# Variabile globale che tiene conto del numero di eventi che sono stati rilevati fino a quel preciso momento
 event_count = 0
 
 # Variabile globale per memorizzare l'user_id
@@ -52,7 +51,7 @@ def publish_mqtt_message(client, topic, message):
         print(f"Errore durante l'invio del messaggio MQTT: {e}")
 
 
-# Funzione per tentare la previsione se sono disponibili entrambi i dataset
+# Funzione per tentare la previsione mediante il modello di ML
 def try_predict():
     global accel_data, gyro_data, event_count, user_id
 
@@ -84,7 +83,7 @@ def try_predict():
                         print("Incidente salvato con successo")
                         print(f"ID incidente: {incident_id}")
 
-                        # Invia il messaggio MQTT con l'ID dell'incidente
+                        # Invia il messaggio tramite MQTT con l'ID dell'incidente al topic "iot/notifications"
                         publish_mqtt_message(client, "iot/notifications",
                                              f"Rilevato INCIDENTE con i seguenti valori.\n"
                                              f"Acccelerometro: {accel_data}\n"
@@ -95,19 +94,19 @@ def try_predict():
                     else:
                         print("Incidente non salvato")
 
-                if prediction[0] == "frenate":
-                    url = "http://127.0.0.1:5001/api/frenate/add_frenate"
-                    headers = {"Content-Type": "application/json"}
-                    data = {"cliente": user_id}
-                    response = requests.post(url=url, headers=headers, json=data)
-                    print(f"Valori Accelerometro: {accel_data}")
-                    print(f"Valori Giroscopio: {gyro_data}")
-                    if response.status_code == 200:
-                        print("Frenata salvata con successo")
-                        publish_mqtt_message(client, "iot/notifications", f"Rilevata FRENATA con i seguenti valori.\nAcccelerometro: {accel_data}\nGiroscopio: {gyro_data}")
-
-                    else:
-                        print("Frenata non salvata")
+                # if prediction[0] == "frenate":
+                #     url = "http://127.0.0.1:5001/api/frenate/add_frenate"
+                #     headers = {"Content-Type": "application/json"}
+                #     data = {"cliente": user_id}
+                #     response = requests.post(url=url, headers=headers, json=data)
+                #     print(f"Valori Accelerometro: {accel_data}")
+                #     print(f"Valori Giroscopio: {gyro_data}")
+                #     if response.status_code == 200:
+                #         print("Frenata salvata con successo")
+                #         publish_mqtt_message(client, "iot/notifications", f"Rilevata FRENATA con i seguenti valori.\nAcccelerometro: {accel_data}\nGiroscopio: {gyro_data}")
+                #
+                #     else:
+                #         print("Frenata non salvata")
 
                 if prediction[0] == "altro":
                     print(f"Valori Accelerometro: {accel_data}")
@@ -125,7 +124,7 @@ def try_predict():
         gyro_data = None
 
 # Callback quando il client riceve un messaggio
-def on_message(client, userdata, message):
+def on_message(message):
     global accel_data, gyro_data
 
     payload = message.payload.decode('utf-8')

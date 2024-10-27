@@ -190,77 +190,77 @@ def delete_incidente(id):
 
     return jsonify({"Messaggio": "Incidente eliminato con successo"}), 200
 
-@app.route('/api/frenate/add_frenate', methods=['POST'])
-def register_frenate():
-    data = request.get_json()
-
-    frenate = Frenate()
-
-    frenate.set_data()
-    frenate.set_cliente(data.get('cliente'))
-
-    if not frenate.get_cliente():
-        return jsonify({"Messaggio": "Inserisci l'utente che ha frenato"}), 400
-
-    result = frenate_collection.insert_one(frenate.to_dict())
-    id_frenata = result.inserted_id
-
-    return jsonify({"Messaggio": "Frenata registrata con successo", "id": str(id_frenata)}), 200
-
-
-@app.route('/api/frenate/get_frenate_by_username/<username>', methods=['GET'])
-def find_all_frenate(username):
-    frenate = list(frenate_collection.find({"cliente": username}))
-    for frenata in frenate:
-        frenata['_id'] = str(frenata['_id'])
-    return jsonify(frenate), 200
-
-@app.route('/api/frenate/delete/<id>', methods=['DELETE'])
-def delete_frenata(id):
-    try:
-        frenate_object_id = ObjectId(id)
-    except Exception as e:
-        return jsonify({"Messaggio": "ID non valido"}), 400
-
-    result = frenate_collection.delete_one({"_id": frenate_object_id})
-
-    if result.deleted_count == 0:
-        return jsonify({"Messaggio": "Frenata non trovata"}), 404
-
-    return jsonify({"Messaggio": "Frenata eliminata con successo"}), 200
-
-
-@app.route('/api/send_email/<email_receiver>/<username>', methods=['POST'])
-def send_email(email_receiver, username):
-    email_sender = 'progettoprincipi167@gmail.com'
-    email_password = 'kuae wzfj vejq naup'
-
-    subject = 'INCIDENTE RILEVATO'
-    now = datetime.datetime.now()
-    data = now.strftime("%d/%m/%Y")  # Solo la data
-    ora = now.strftime("%H:%M:%S")  # Solo ora e secondi
-
-    body = f"L'utente {username} si è incidentato il giorno {data} all'ora {ora}"
-
-    em = EmailMessage()
-    em['From'] = email_sender
-    em['To'] = email_receiver
-    em['Subject'] = subject
-    em.set_content(body)
-
-    context = ssl.create_default_context()
-
-    try:
-        # Accesso e invio dell'email tramite il server SMTP di Gmail
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
-            smtp.login(email_sender, email_password)
-            smtp.sendmail(email_sender, email_receiver, em.as_string())
-
-        return jsonify({"Messaggio": "Email mandata con successo"}), 200
-
-    except Exception as e:
-        # Gestione degli errori
-        return jsonify({"Errore": str(e)}), 500
+# @app.route('/api/frenate/add_frenate', methods=['POST'])
+# def register_frenate():
+#     data = request.get_json()
+#
+#     frenate = Frenate()
+#
+#     frenate.set_data()
+#     frenate.set_cliente(data.get('cliente'))
+#
+#     if not frenate.get_cliente():
+#         return jsonify({"Messaggio": "Inserisci l'utente che ha frenato"}), 400
+#
+#     result = frenate_collection.insert_one(frenate.to_dict())
+#     id_frenata = result.inserted_id
+#
+#     return jsonify({"Messaggio": "Frenata registrata con successo", "id": str(id_frenata)}), 200
+#
+#
+# @app.route('/api/frenate/get_frenate_by_username/<username>', methods=['GET'])
+# def find_all_frenate(username):
+#     frenate = list(frenate_collection.find({"cliente": username}))
+#     for frenata in frenate:
+#         frenata['_id'] = str(frenata['_id'])
+#     return jsonify(frenate), 200
+#
+# @app.route('/api/frenate/delete/<id>', methods=['DELETE'])
+# def delete_frenata(id):
+#     try:
+#         frenate_object_id = ObjectId(id)
+#     except Exception as e:
+#         return jsonify({"Messaggio": "ID non valido"}), 400
+#
+#     result = frenate_collection.delete_one({"_id": frenate_object_id})
+#
+#     if result.deleted_count == 0:
+#         return jsonify({"Messaggio": "Frenata non trovata"}), 404
+#
+#     return jsonify({"Messaggio": "Frenata eliminata con successo"}), 200
+#
+#
+# @app.route('/api/send_email/<email_receiver>/<username>', methods=['POST'])
+# def send_email(email_receiver, username):
+#     email_sender = 'progettoprincipi167@gmail.com'
+#     email_password = 'kuae wzfj vejq naup'
+#
+#     subject = 'INCIDENTE RILEVATO'
+#     now = datetime.datetime.now()
+#     data = now.strftime("%d/%m/%Y")  # Solo la data
+#     ora = now.strftime("%H:%M:%S")  # Solo ora e secondi
+#
+#     body = f"L'utente {username} si è incidentato il giorno {data} all'ora {ora}"
+#
+#     em = EmailMessage()
+#     em['From'] = email_sender
+#     em['To'] = email_receiver
+#     em['Subject'] = subject
+#     em.set_content(body)
+#
+#     context = ssl.create_default_context()
+#
+#     try:
+#         # Accesso e invio dell'email tramite il server SMTP di Gmail
+#         with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+#             smtp.login(email_sender, email_password)
+#             smtp.sendmail(email_sender, email_receiver, em.as_string())
+#
+#         return jsonify({"Messaggio": "Email mandata con successo"}), 200
+#
+#     except Exception as e:
+#         # Gestione degli errori
+#         return jsonify({"Errore": str(e)}), 500
 
 @app.route('/api/incidenti/', methods=['GET'])
 def get_all():
