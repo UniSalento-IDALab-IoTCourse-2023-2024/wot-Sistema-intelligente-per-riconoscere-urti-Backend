@@ -1,0 +1,26 @@
+services:
+  care_service:
+    container_name: care_service
+    image: care_service
+    build: .
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - DATABASE_URL=mongodb://db:27017/database
+      - DATABASE=database
+      - JWT_SECRET=CIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAO
+      - USERNAME=cosimo
+      - PASSWORD=cosimo
+    depends_on:
+      - db
+
+  db:
+    container_name: db
+    image: mongo:latest
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+
