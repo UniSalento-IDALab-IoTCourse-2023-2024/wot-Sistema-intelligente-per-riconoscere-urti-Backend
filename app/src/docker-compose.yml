@@ -9,9 +9,9 @@ services:
     environment:
       - DATABASE_URL=mongodb://db:27017/database
       - DATABASE=database
-      - JWT_SECRET=CIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAO
-      - USERNAME=cosimo
-      - PASSWORD=cosimo
+      - JWT_SECRET=**
+      - USERNAME=**
+      - PASSWORD=**
     depends_on:
       - db
 

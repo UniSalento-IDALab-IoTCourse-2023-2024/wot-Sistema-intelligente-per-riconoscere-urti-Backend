@@ -2,7 +2,7 @@ FROM python:3.11.5-slim
 
 COPY requirements.txt .
 
-COPY ./main/ServerMQTT.py .
+COPY main/ServerML.py .
 
 COPY ./main/model.joblib .
 
