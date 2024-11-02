@@ -16,7 +16,7 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-app.config['SECRET_KEY'] = 'CIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAOCIAO'
+app.config['SECRET_KEY'] = '***'
 db_url = os.getenv("DATABASE_URL")
 db_name = os.getenv("DATABASE")
 
