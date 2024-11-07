@@ -37,9 +37,35 @@ def generate_token(username):
     return token
 
 
+# Funzione per verificare il codice jwt
+def token_required():
+    auth_header = request.headers.get('Authorization')
+
+    if not auth_header:
+        return jsonify({"Messaggio": "Token mancante!"}), 401
+
+    # Verifica che il token sia un Bearer Token
+    parts = auth_header.split()
+    if parts[0].lower() != 'bearer' or len(parts) != 2:
+        return jsonify({"Messaggio": "Formato del token non valido!"}), 401
+
+    # Estrazione del Bearer Token
+    token = parts[1]
+
+    try:
+        jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        return jsonify({"Messaggio": "Token scaduto!"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"Messaggio": "Token non valido!"}), 401
+
+    return None, 200  # Successo
+
+
 # Route per la registrazione
 @app.route('/api/utenti/registrazione', methods=['POST'])
 def register():
+
     data = request.json
 
     utente = Utente()
@@ -70,6 +96,12 @@ def register():
 
 @app.route('/api/utenti/update/<username>', methods=['PUT'])
 def update_user(username):
+
+    # Protezione API
+    error_response, status_code = token_required()
+    if error_response:
+        return error_response, status_code
+
     data = request.json
 
     # Trova l'utente esistente
@@ -100,6 +132,7 @@ def update_user(username):
 # Route per il login
 @app.route('/api/utenti/login', methods=['POST'])
 def login():
+
     data = request.json
 
     username = data.get('username')
@@ -122,6 +155,11 @@ def login():
 
 @app.route('/api/utenti/delete/<username>', methods=['DELETE'])
 def delete_user(username):
+    # Protezione API
+    error_response, status_code = token_required()
+    if error_response:
+        return error_response, status_code
+
     result = users_collection.delete_one({"username": username})
 
     if result.deleted_count == 0:
@@ -132,6 +170,11 @@ def delete_user(username):
 
 @app.route('/api/utenti/find_by_username/<username>', methods=['GET'])
 def find_by_username(username):
+    # Protezione API
+    error_response, status_code = token_required()
+    if error_response:
+        return error_response, status_code
+
     user = users_collection.find_one({"username": username}, {"_id": 0})
 
     if not user:
@@ -144,6 +187,11 @@ def find_by_username(username):
 
 @app.route('/api/utenti/', methods=['GET'])
 def find_all():
+    # Protezione API
+    error_response, status_code = token_required()
+    if error_response:
+        return error_response, status_code
+
     users = list(users_collection.find({}, {"_id": 0}))
     for user in users:
         user['password'] = "****"
@@ -153,6 +201,10 @@ def find_all():
 
 @app.route('/api/incidenti/add_incidenti', methods=['POST'])
 def register_incident():
+    # Protezione API
+    error_response, status_code = token_required()
+    if error_response:
+        return error_response, status_code
     data = request.get_json()
 
     incidente = Incidente()
@@ -171,6 +223,11 @@ def register_incident():
 
 @app.route('/api/incidenti/get_incidenti_by_username/<username>', methods=['GET'])
 def find_all_incident(username):
+    # Protezione API
+    error_response, status_code = token_required()
+    if error_response:
+        return error_response, status_code
+
     incidenti = list(incident_collection.find({"cliente_incidentato": username}))
     for incidente in incidenti:
         incidente['_id'] = str(incidente['_id'])  # Converti ObjectId in stringa
@@ -180,6 +237,11 @@ def find_all_incident(username):
 
 @app.route('/api/incidenti/delete/<id>', methods=['DELETE'])
 def delete_incidente(id):
+    # Protezione API
+    error_response, status_code = token_required()
+    if error_response:
+        return error_response, status_code
+
     try:
         incident_object_id = ObjectId(id)
     except Exception as e:
@@ -266,6 +328,11 @@ def delete_incidente(id):
 
 @app.route('/api/incidenti/', methods=['GET'])
 def get_all():
+    # Protezione API
+    error_response, status_code = token_required()
+    if error_response:
+        return error_response, status_code
+
     try:
         # Trova tutti gli incidenti, selezionando solo "cliente_incidentato" e "data"
         incidenti = list(incident_collection.find({}, {"cliente_incidentato": 1, "date": 1, "_id": 0}))
